@@ -64,16 +64,13 @@
             -ms-text-overflow: ellipsis;
             -o-text-overflow: ellipsis;
             text-overflow: ellipsis;
-            width: 400px;
+            width: 300px;
+            margin-right:3px;
         }
 
             #pac-input:focus {
                 border-color: #4d90fe;
             }
-
-        .pac-container {
-            font-family: Roboto;
-        }
 
         #type-selector {
             color: #fff;
@@ -91,68 +88,76 @@
 
 <body>
     <div id="map-canvas"></div>
-    <input id="pac-input" class="controls" type="text" placeholder="Zoek...">
+    <input id="pac-input" class="controls" type="text" placeholder="Zoek..."> <input id="pac-reset" class="controls" type="button" value="Reset">
     <div id="footer">Sources: <a href="https://www.acm.nl/nl/onderwerpen/telecommunicatie/telefoonnummers/netnummers-in-nederland/">ACM.nl</a> | <a href="https://github.com/RobThree/NetnummersNL">Github</a> | <a href="http://robiii.me">RobIII</a></div>
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false&language=nl&libraries=places"></script>
     <script type="text/javascript">
-        var map;
-        var markers = [];
-        var countryRestrict = { 'country': 'nl' };
-
         function initialize() {
-            var mapOptions = {
+            var map;
+            var countryRestrict = { 'country': 'nl' };
+            var tableId = '1aYAhVRajkhHpFPRbh-6wBUBuLTijj7mIwUeWgP5Q';
+
+            var defaultMapOptions = {
                 zoom: 8,
-                center: new google.maps.LatLng(51.5, 5.75),
+                center: new google.maps.LatLng(52.0, 5.75),
                 mapTypeId: google.maps.MapTypeId.ROADMAP
             };
-            map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+            map = new google.maps.Map(document.getElementById('map-canvas'), defaultMapOptions);
 
-            var ctaLayer = new google.maps.KmlLayer({
-                url: 'https://www.acm.nl/download/bestand/netnummers.kml'
+            var ftLayer = new google.maps.FusionTablesLayer({
+                query: {
+                    select: 'geometry',
+                    from: tableId
+                }, styles: [{
+                    polygonOptions: {
+                        fillColor: '#00ff00',
+                        fillOpacity: 0.05
+                    }
+                }]
             });
-            ctaLayer.setMap(map);
-
+            ftLayer.setMap(map);
+            
+            var rst = document.getElementById('pac-reset');
             var input = document.getElementById('pac-input');
+
             map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+            map.controls[google.maps.ControlPosition.TOP_LEFT].push(rst);
+
             var autocomplete = new google.maps.places.Autocomplete(input, { types: ['(regions)'], componentRestrictions: countryRestrict });
+
+            google.maps.event.addDomListener(rst, 'click', function () {
+                map.setOptions(defaultMapOptions);
+                togglePolygons();
+            });
 
             google.maps.event.addListener(autocomplete, 'place_changed', function () {
                 var place = autocomplete.getPlace();
-                if (!place.geometry) {
+                if (!place.geometry)
                     return;
-                }
+
                 input.value = '';
-                for (var i = 0, marker; marker = markers[i]; i++) {
-                    marker.setMap(null);
-                }
 
-                // Get the icon, place name, and location.
-                markers = [];
-                var image = {
-                    url: place.icon,
-                    size: new google.maps.Size(71, 71),
-                    origin: new google.maps.Point(0, 0),
-                    anchor: new google.maps.Point(17, 34),
-                    scaledSize: new google.maps.Size(25, 25)
-                };
+                // title: place.name,
+                // position: place.geometry.location
+                togglePolygons(place.geometry.location);
 
-                // Create a marker for place.
-                var marker = new google.maps.Marker({
-                    map: map,
-                    icon: image,
-                    title: place.name,
-                    position: place.geometry.location
-                });
-
-                markers.push(marker);
-
+                // Would prefer a map.panToBounds() here, but I have no idea how to get the bounds (yet)
                 map.panTo(place.geometry.location);
-
                 var listener = google.maps.event.addListener(map, "idle", function () {
                     if (map.getZoom() < 10) map.setZoom(10);
                     google.maps.event.removeListener(listener);
                 });
             });
+
+            function togglePolygons(latLng) {
+                ftLayer.setOptions({
+                    query: {
+                        select: 'geometry',
+                        from: tableId,
+                        where: latLng ? 'ST_INTERSECTS(geometry, CIRCLE(LATLNG(' + latLng.lat() + ', ' + latLng.lng() + '),1))' : null
+                    }
+                });
+            }
         }
         google.maps.event.addDomListener(window, 'load', initialize);
     </script>
