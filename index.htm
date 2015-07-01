@@ -1,0 +1,160 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Netnummer regio's Nederland / Area code regions Netherlands</title>
+    <meta name="description" content="Netnummer regio's Nederland / Area code regions Netherlands">
+    <style type="text/css">
+        html, body, #map-canvas {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            font-size: 10pt;
+        }
+
+        #footer {
+            position: absolute;
+            width: 100%;
+            padding: 10px 0;
+            text-align: center;
+            bottom: 0;
+            background-color: rgba(0,0,0,.8);
+            color: #fff;
+        }
+
+            #footer a,
+            #footer a:active,
+            #footer a:focus,
+            #footer a:hover {
+                color: #fff;
+                text-decoration: none;
+            }
+
+                #footer a:hover {
+                    text-decoration: underline;
+                }
+
+        .controls {
+            margin-top: 16px;
+            border: 1px solid transparent;
+            border-radius: 2px 0 0 2px;
+            -moz-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            box-sizing: border-box;
+            height: 32px;
+            outline: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        #pac-input {
+            background-color: #fff;
+            font-family: Roboto;
+            font-size: 15px;
+            font-weight: 300;
+            padding: 0 11px 0 13px;
+            -ms-text-overflow: ellipsis;
+            -o-text-overflow: ellipsis;
+            text-overflow: ellipsis;
+            width: 400px;
+        }
+
+            #pac-input:focus {
+                border-color: #4d90fe;
+            }
+
+        .pac-container {
+            font-family: Roboto;
+        }
+
+        #type-selector {
+            color: #fff;
+            background-color: #4d90fe;
+            padding: 5px 11px 0 11px;
+        }
+
+            #type-selector label {
+                font-family: Roboto;
+                font-size: 13px;
+                font-weight: 300;
+            }
+    </style>
+</head>
+
+<body>
+    <div id="map-canvas"></div>
+    <input id="pac-input" class="controls" type="text" placeholder="Zoek...">
+    <div id="footer">Sources: <a href="https://www.acm.nl/nl/onderwerpen/telecommunicatie/telefoonnummers/netnummers-in-nederland/">ACM.nl</a> | <a href="https://github.com/RobThree/NetnummersNL">Github</a> | <a href="http://robiii.me">RobIII</a></div>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false&language=nl&libraries=places"></script>
+    <script type="text/javascript">
+        var map;
+        var markers = [];
+        var countryRestrict = { 'country': 'nl' };
+
+        function initialize() {
+            var mapOptions = {
+                zoom: 8,
+                center: new google.maps.LatLng(51.5, 5.75),
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+            };
+            map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+
+            var ctaLayer = new google.maps.KmlLayer({
+                url: 'https://www.acm.nl/download/bestand/netnummers.kml'
+            });
+            ctaLayer.setMap(map);
+
+            var input = document.getElementById('pac-input');
+            map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+            var autocomplete = new google.maps.places.Autocomplete(input, { types: ['(regions)'], componentRestrictions: countryRestrict });
+
+            google.maps.event.addListener(autocomplete, 'place_changed', function () {
+                var place = autocomplete.getPlace();
+                if (!place.geometry) {
+                    return;
+                }
+                input.value = '';
+                for (var i = 0, marker; marker = markers[i]; i++) {
+                    marker.setMap(null);
+                }
+
+                // Get the icon, place name, and location.
+                markers = [];
+                var image = {
+                    url: place.icon,
+                    size: new google.maps.Size(71, 71),
+                    origin: new google.maps.Point(0, 0),
+                    anchor: new google.maps.Point(17, 34),
+                    scaledSize: new google.maps.Size(25, 25)
+                };
+
+                // Create a marker for place.
+                var marker = new google.maps.Marker({
+                    map: map,
+                    icon: image,
+                    title: place.name,
+                    position: place.geometry.location
+                });
+
+                markers.push(marker);
+
+                map.panTo(place.geometry.location);
+
+                var listener = google.maps.event.addListener(map, "idle", function () {
+                    if (map.getZoom() < 10) map.setZoom(10);
+                    google.maps.event.removeListener(listener);
+                });
+            });
+        }
+        google.maps.event.addDomListener(window, 'load', initialize);
+    </script>
+</body>
+</html>
