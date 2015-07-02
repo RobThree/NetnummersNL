@@ -95,28 +95,48 @@
         google.load('visualization', '1');
         google.load("maps", "3", {
             other_params: 'sensor=false&language=nl&libraries=places', callback: function () {
-                var map;
-                var countryRestrict = { 'country': 'nl' };
-                var tableId = '1aYAhVRajkhHpFPRbh-6wBUBuLTijj7mIwUeWgP5Q';
-                var infoWindow;
+                // === Below are some options you can change/tweak ===
 
+                // 'Database' settings
+                var db = {
+                    tableId: '1aYAhVRajkhHpFPRbh-6wBUBuLTijj7mIwUeWgP5Q',
+                    // Column mappings
+                    columnNames: {
+                        name: 'name',
+                        description: 'description',
+                        geometry: 'geometry'
+                    }
+                };
+
+                // Autocomplete box options
+                var acOptions = {
+                    componentRestrictions: { 'country': 'nl' }, // Two-character, ISO 3166-1 Alpha-2 compatible country code.
+                    types: ['(regions)']                        // See https://developers.google.com/maps/documentation/javascript/places-autocomplete#add_autocomplete for options
+                }
+
+                // Default view
                 var defaultMapOptions = {
                     zoom: 8,
                     center: new google.maps.LatLng(52.0, 5.75),
                     mapTypeId: google.maps.MapTypeId.ROADMAP
                 };
+
+                // Default polygon stule
+                var defaultPolygonStyle = [{
+                    polygonOptions: {
+                        fillColor: '#00ff00',
+                        fillOpacity: 0.05
+                    }
+                }];
+
+                // === Do not edit below this line unless you know what you're doing! ===
+
+                // "Globals"
+                var map, infoWindow;
                 map = new google.maps.Map(document.getElementById('map-canvas'), defaultMapOptions);
 
                 var ftLayer = new google.maps.FusionTablesLayer({
-                    query: {
-                        select: 'geometry',
-                        from: tableId
-                    }, styles: [{
-                        polygonOptions: {
-                            fillColor: '#00ff00',
-                            fillOpacity: 0.05
-                        }
-                    }]
+                    query: { select: db.columnNames.geometry, from: db.tableId }, styles: defaultPolygonStyle
                 });
                 ftLayer.setMap(map);
 
@@ -126,7 +146,7 @@
                 map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
                 map.controls[google.maps.ControlPosition.TOP_LEFT].push(rst);
 
-                var autocomplete = new google.maps.places.Autocomplete(input, { types: ['(regions)'], componentRestrictions: countryRestrict });
+                var autocomplete = new google.maps.places.Autocomplete(input, acOptions);
 
                 google.maps.event.addDomListener(rst, 'click', function () {
                     map.setOptions(defaultMapOptions);
@@ -155,7 +175,7 @@
                 function showInfoWindow(latLng, placeName) {
                     infoWindow = infoWindow || new google.maps.InfoWindow();
                     if (latLng) {
-                        var query = 'SELECT name, description FROM ' + tableId + ' WHERE ST_INTERSECTS(geometry, CIRCLE(LATLNG(' + latLng.lat() + ', ' + latLng.lng() + '),1)) LIMIT 1';
+                        var query = 'SELECT \'' + db.columnNames.name + '\' , \'' + db.columnNames.description + '\' FROM ' + db.tableId + ' WHERE ST_INTERSECTS(\'' + db.columnNames.geometry + '\' , CIRCLE(LATLNG(' + latLng.lat() + ', ' + latLng.lng() + '),1)) LIMIT 1';
                         var gvizQuery = new google.visualization.Query('https://www.google.com/fusiontables/gvizdata?tq=' + encodeURIComponent(query));
                         gvizQuery.send(function (response) {
                             infoWindow.setMap(map);
@@ -171,9 +191,9 @@
                 function togglePolygons(latLng) {
                     ftLayer.setOptions({
                         query: {
-                            select: 'geometry',
-                            from: tableId,
-                            where: latLng ? 'ST_INTERSECTS(geometry, CIRCLE(LATLNG(' + latLng.lat() + ', ' + latLng.lng() + '),1))' : null
+                            select: db.columnNames.geometry,
+                            from: db.tableId,
+                            where: latLng ? 'ST_INTERSECTS(\'' + db.columnNames.geometry + '\', CIRCLE(LATLNG(' + latLng.lat() + ', ' + latLng.lng() + '),1))' : null
                         }
                     });
                 }
