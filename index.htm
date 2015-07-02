@@ -90,102 +90,101 @@
     <div id="map-canvas"></div>
     <input id="pac-input" class="controls" type="text" placeholder="Zoek..."> <input id="pac-reset" class="controls" type="button" value="Reset">
     <div id="footer">Sources: <a href="https://www.acm.nl/nl/onderwerpen/telecommunicatie/telefoonnummers/netnummers-in-nederland/">ACM.nl</a> | <a href="https://github.com/RobThree/NetnummersNL">Github</a> | <a href="http://robiii.me">RobIII</a></div>
-    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false&language=nl&libraries=places"></script>
     <script src="https://www.google.com/jsapi"></script>
     <script>
         google.load('visualization', '1');
+        google.load("maps", "3", {
+            other_params: 'sensor=false&language=nl&libraries=places', callback: function () {
+                var map;
+                var countryRestrict = { 'country': 'nl' };
+                var tableId = '1aYAhVRajkhHpFPRbh-6wBUBuLTijj7mIwUeWgP5Q';
+                var infoWindow;
 
-        function initialize() {
-            var map;
-            var countryRestrict = { 'country': 'nl' };
-            var tableId = '1aYAhVRajkhHpFPRbh-6wBUBuLTijj7mIwUeWgP5Q';
+                var defaultMapOptions = {
+                    zoom: 8,
+                    center: new google.maps.LatLng(52.0, 5.75),
+                    mapTypeId: google.maps.MapTypeId.ROADMAP
+                };
+                map = new google.maps.Map(document.getElementById('map-canvas'), defaultMapOptions);
 
-            var defaultMapOptions = {
-                zoom: 8,
-                center: new google.maps.LatLng(52.0, 5.75),
-                mapTypeId: google.maps.MapTypeId.ROADMAP
-            };
-            map = new google.maps.Map(document.getElementById('map-canvas'), defaultMapOptions);
-
-            var infoWindow = new google.maps.InfoWindow();
-            infoWindow.setMap(map);
-
-            var ftLayer = new google.maps.FusionTablesLayer({
-                query: {
-                    select: 'geometry',
-                    from: tableId
-                }, styles: [{
-                    polygonOptions: {
-                        fillColor: '#00ff00',
-                        fillOpacity: 0.05
-                    }
-                }]
-            });
-            ftLayer.setMap(map);
-
-            var rst = document.getElementById('pac-reset');
-            var input = document.getElementById('pac-input');
-
-            map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
-            map.controls[google.maps.ControlPosition.TOP_LEFT].push(rst);
-
-            var autocomplete = new google.maps.places.Autocomplete(input, { types: ['(regions)'], componentRestrictions: countryRestrict });
-
-            google.maps.event.addDomListener(rst, 'click', function () {
-                map.setOptions(defaultMapOptions);
-                togglePolygons();
-                showInfoWindow();
-            });
-
-            google.maps.event.addListener(autocomplete, 'place_changed', function () {
-                var place = autocomplete.getPlace();
-                if (!place.geometry)
-                    return;
-
-                input.value = '';
-
-                togglePolygons(place.geometry.location);
-                showInfoWindow(place.geometry.location, place.name);
-
-                // Would prefer a map.panToBounds() here, but I have no idea how to get the bounds (yet)
-                map.panTo(place.geometry.location);
-                var listener = google.maps.event.addListener(map, "idle", function () {
-                    if (map.getZoom() < 10) map.setZoom(10);
-                    google.maps.event.removeListener(listener);
-                });
-            });
-
-            function showInfoWindow(latLng, placeName) {
-                if (latLng) {
-                    var query = 'SELECT name, description FROM ' + tableId + ' WHERE ST_INTERSECTS(geometry, CIRCLE(LATLNG(' + latLng.lat() + ', ' + latLng.lng() + '),1)) LIMIT 1';
-                    var gvizQuery = new google.visualization.Query('https://www.google.com/fusiontables/gvizdata?tq=' + encodeURIComponent(query));
-                    gvizQuery.send(function (response) {
-                        infoWindow.setPosition(latLng);
-                        infoWindow.setContent('<h1>' + escapeHtml(placeName) + '</h1>' + ((response.getDataTable().getNumberOfRows() == 1) ? response.getDataTable().getValue(0, 1).replace(/h1>/ig, 'p>') : ''));
-                        infoWindow.open(map);
-                    });
-                } else {
-                    infoWindow.close();
-                }
-            }
-
-            function togglePolygons(latLng) {
-                ftLayer.setOptions({
+                var ftLayer = new google.maps.FusionTablesLayer({
                     query: {
                         select: 'geometry',
-                        from: tableId,
-                        where: latLng ? 'ST_INTERSECTS(geometry, CIRCLE(LATLNG(' + latLng.lat() + ', ' + latLng.lng() + '),1))' : null
-                    }
+                        from: tableId
+                    }, styles: [{
+                        polygonOptions: {
+                            fillColor: '#00ff00',
+                            fillOpacity: 0.05
+                        }
+                    }]
                 });
-            }
+                ftLayer.setMap(map);
 
-            function escapeHtml(str) {
-                var div = document.createElement('div');
-                div.appendChild(document.createTextNode(str));
-                return div.innerHTML;
-            };
-        }
-        google.maps.event.addDomListener(window, 'load', initialize);
+                var rst = document.getElementById('pac-reset');
+                var input = document.getElementById('pac-input');
+
+                map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+                map.controls[google.maps.ControlPosition.TOP_LEFT].push(rst);
+
+                var autocomplete = new google.maps.places.Autocomplete(input, { types: ['(regions)'], componentRestrictions: countryRestrict });
+
+                google.maps.event.addDomListener(rst, 'click', function () {
+                    map.setOptions(defaultMapOptions);
+                    togglePolygons();
+                    showInfoWindow();
+                });
+
+                google.maps.event.addListener(autocomplete, 'place_changed', function () {
+                    var place = autocomplete.getPlace();
+                    if (!place.geometry)
+                        return;
+
+                    input.value = '';
+
+                    togglePolygons(place.geometry.location);
+                    showInfoWindow(place.geometry.location, place.name);
+
+                    // Would prefer a map.panToBounds() here, but I have no idea how to get the bounds (yet)
+                    map.panTo(place.geometry.location);
+                    var listener = google.maps.event.addListener(map, "idle", function () {
+                        if (map.getZoom() < 10) map.setZoom(10);
+                        google.maps.event.removeListener(listener);
+                    });
+                });
+
+                function showInfoWindow(latLng, placeName) {
+                    infoWindow = infoWindow || new google.maps.InfoWindow();
+                    if (latLng) {
+                        var query = 'SELECT name, description FROM ' + tableId + ' WHERE ST_INTERSECTS(geometry, CIRCLE(LATLNG(' + latLng.lat() + ', ' + latLng.lng() + '),1)) LIMIT 1';
+                        var gvizQuery = new google.visualization.Query('https://www.google.com/fusiontables/gvizdata?tq=' + encodeURIComponent(query));
+                        gvizQuery.send(function (response) {
+                            infoWindow.setMap(map);
+                            infoWindow.setPosition(latLng);
+                            infoWindow.setContent('<h1>' + escapeHtml(placeName) + '</h1>' + ((response.getDataTable().getNumberOfRows() == 1) ? response.getDataTable().getValue(0, 1).replace(/h1>/ig, 'p>') : ''));
+                            infoWindow.open(map);
+                        });
+                    } else {
+                        infoWindow.close();
+                    }
+                }
+
+                function togglePolygons(latLng) {
+                    ftLayer.setOptions({
+                        query: {
+                            select: 'geometry',
+                            from: tableId,
+                            where: latLng ? 'ST_INTERSECTS(geometry, CIRCLE(LATLNG(' + latLng.lat() + ', ' + latLng.lng() + '),1))' : null
+                        }
+                    });
+                }
+
+                function escapeHtml(str) {
+                    var div = document.createElement('div');
+                    div.appendChild(document.createTextNode(str));
+                    return div.innerHTML;
+                };
+            }
+        });
     </script>
 </body>
 </html>
