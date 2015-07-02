@@ -65,7 +65,7 @@
             -o-text-overflow: ellipsis;
             text-overflow: ellipsis;
             width: 300px;
-            margin-right:3px;
+            margin-right: 3px;
         }
 
             #pac-input:focus {
@@ -91,7 +91,10 @@
     <input id="pac-input" class="controls" type="text" placeholder="Zoek..."> <input id="pac-reset" class="controls" type="button" value="Reset">
     <div id="footer">Sources: <a href="https://www.acm.nl/nl/onderwerpen/telecommunicatie/telefoonnummers/netnummers-in-nederland/">ACM.nl</a> | <a href="https://github.com/RobThree/NetnummersNL">Github</a> | <a href="http://robiii.me">RobIII</a></div>
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false&language=nl&libraries=places"></script>
-    <script type="text/javascript">
+    <script src="https://www.google.com/jsapi"></script>
+    <script>
+        google.load('visualization', '1');
+
         function initialize() {
             var map;
             var countryRestrict = { 'country': 'nl' };
@@ -103,6 +106,9 @@
                 mapTypeId: google.maps.MapTypeId.ROADMAP
             };
             map = new google.maps.Map(document.getElementById('map-canvas'), defaultMapOptions);
+
+            var infoWindow = new google.maps.InfoWindow();
+            infoWindow.setMap(map);
 
             var ftLayer = new google.maps.FusionTablesLayer({
                 query: {
@@ -116,7 +122,7 @@
                 }]
             });
             ftLayer.setMap(map);
-            
+
             var rst = document.getElementById('pac-reset');
             var input = document.getElementById('pac-input');
 
@@ -128,6 +134,7 @@
             google.maps.event.addDomListener(rst, 'click', function () {
                 map.setOptions(defaultMapOptions);
                 togglePolygons();
+                showInfoWindow();
             });
 
             google.maps.event.addListener(autocomplete, 'place_changed', function () {
@@ -137,9 +144,8 @@
 
                 input.value = '';
 
-                // title: place.name,
-                // position: place.geometry.location
                 togglePolygons(place.geometry.location);
+                showInfoWindow(place.geometry.location, place.name);
 
                 // Would prefer a map.panToBounds() here, but I have no idea how to get the bounds (yet)
                 map.panTo(place.geometry.location);
@@ -148,6 +154,20 @@
                     google.maps.event.removeListener(listener);
                 });
             });
+
+            function showInfoWindow(latLng, placeName) {
+                if (latLng) {
+                    var query = 'SELECT name, description FROM ' + tableId + ' WHERE ST_INTERSECTS(geometry, CIRCLE(LATLNG(' + latLng.lat() + ', ' + latLng.lng() + '),1)) LIMIT 1';
+                    var gvizQuery = new google.visualization.Query('//www.google.com/fusiontables/gvizdata?tq=' + encodeURIComponent(query));
+                    gvizQuery.send(function (response) {
+                        infoWindow.setPosition(latLng);
+                        infoWindow.setContent('<h1>' + escapeHtml(placeName) + '</h1>' + ((response.getDataTable().getNumberOfRows() == 1) ? response.getDataTable().getValue(0, 1).replace(/h1>/ig, 'p>') : ''));
+                        infoWindow.open(map);
+                    });
+                } else {
+                    infoWindow.close();
+                }
+            }
 
             function togglePolygons(latLng) {
                 ftLayer.setOptions({
@@ -158,6 +178,12 @@
                     }
                 });
             }
+
+            function escapeHtml(str) {
+                var div = document.createElement('div');
+                div.appendChild(document.createTextNode(str));
+                return div.innerHTML;
+            };
         }
         google.maps.event.addDomListener(window, 'load', initialize);
     </script>
