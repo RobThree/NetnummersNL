@@ -2,12 +2,11 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Netnummer regio's Nederland / Area code regions Netherlands</title>
     <meta name="description" content="Netnummer regio's Nederland / Area code regions Netherlands">
     <style type="text/css">
-        html, body, #map-canvas {
+        html, body, #map {
             height: 100%;
             margin: 0;
             padding: 0;
@@ -42,170 +41,14 @@
                 #footer a:hover {
                     text-decoration: underline;
                 }
-
-        .controls {
-            margin-top: 16px;
-            border: 1px solid transparent;
-            border-radius: 2px 0 0 2px;
-            -moz-box-sizing: border-box;
-            -webkit-box-sizing: border-box;
-            box-sizing: border-box;
-            height: 32px;
-            outline: none;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-        }
-
-        #pac-input {
-            background-color: #fff;
-            font-family: Roboto;
-            font-size: 15px;
-            font-weight: 300;
-            padding: 0 11px 0 13px;
-            -ms-text-overflow: ellipsis;
-            -o-text-overflow: ellipsis;
-            text-overflow: ellipsis;
-            width: 300px;
-            margin-right: 3px;
-        }
-
-            #pac-input:focus {
-                border-color: #4d90fe;
-            }
-
-        #type-selector {
-            color: #fff;
-            background-color: #4d90fe;
-            padding: 5px 11px 0 11px;
-        }
-
-            #type-selector label {
-                font-family: Roboto;
-                font-size: 13px;
-                font-weight: 300;
-            }
     </style>
 </head>
 
 <body>
-    <div id="map-canvas"></div>
-    <input id="pac-input" class="controls" type="text" placeholder="Zoek..."> <input id="pac-reset" class="controls" type="button" value="Reset">
+    <iframe id="map" src="//www.google.com/maps/d/u/0/embed?mid=147Mdj17Grxb6wsJy6lE3WmfMQcs&ehbc=2E312F"></iframe>
     <div id="footer">Sources: <a href="https://www.acm.nl/nl/onderwerpen/telecommunicatie/telefoonnummers/netnummers-in-nederland/">ACM.nl</a> | <a href="https://github.com/RobThree/NetnummersNL">Github</a> | <a href="http://robiii.me">RobIII</a></div>
-    <script src="https://www.google.com/jsapi"></script>
+
     <script>
-        google.load('visualization', '1');
-        google.load("maps", "3", {
-            other_params: 'key=AIzaSyCQn_tPmFb1Y2eogajlZLZBwIG5lo9Ork0&language=nl&libraries=places', callback: function () {
-                // === Below are some options you can change/tweak ===
-
-                // 'Database' settings
-                var db = {
-                    tableId: '1aYAhVRajkhHpFPRbh-6wBUBuLTijj7mIwUeWgP5Q',
-                    // Column mappings
-                    columnNames: {
-                        name: 'name',
-                        description: 'description',
-                        geometry: 'geometry'
-                    }
-                };
-
-                // Autocomplete box options
-                var acOptions = {
-                    componentRestrictions: { 'country': 'nl' }, // Two-character, ISO 3166-1 Alpha-2 compatible country code.
-                    types: ['(regions)']                        // See https://developers.google.com/maps/documentation/javascript/places-autocomplete#add_autocomplete for options
-                }
-
-                // Default view
-                var defaultMapOptions = {
-                    zoom: 8,
-                    center: new google.maps.LatLng(52.0, 5.75),
-                    mapTypeId: google.maps.MapTypeId.ROADMAP
-                };
-
-                // Default polygon style
-                var defaultPolygonStyle = [{
-                    polygonOptions: {
-                        fillColor: '#00ff00',
-                        fillOpacity: 0.05
-                    }
-                }];
-
-                // === Do not edit below this line unless you know what you're doing! ===
-
-                // "Globals"
-                var map, infoWindow;
-                map = new google.maps.Map(document.getElementById('map-canvas'), defaultMapOptions);
-
-                var ftLayer = new google.maps.FusionTablesLayer({
-                    query: { select: db.columnNames.geometry, from: db.tableId }, styles: defaultPolygonStyle
-                });
-                ftLayer.setMap(map);
-
-                var rst = document.getElementById('pac-reset');
-                var input = document.getElementById('pac-input');
-
-                map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
-                map.controls[google.maps.ControlPosition.TOP_LEFT].push(rst);
-
-                var autocomplete = new google.maps.places.Autocomplete(input, acOptions);
-
-                google.maps.event.addDomListener(rst, 'click', function () {
-                    map.setOptions(defaultMapOptions);
-                    togglePolygons();
-                    showInfoWindow();
-                });
-
-                google.maps.event.addListener(autocomplete, 'place_changed', function () {
-                    var place = autocomplete.getPlace();
-                    if (!place.geometry)
-                        return;
-
-                    input.value = '';
-
-                    togglePolygons(place.geometry.location);
-                    showInfoWindow(place.geometry.location, place.name);
-
-                    // Would prefer a map.panToBounds() here, but I have no idea how to get the bounds (yet)
-                    map.panTo(place.geometry.location);
-                    var listener = google.maps.event.addListener(map, "idle", function () {
-                        if (map.getZoom() < 10) map.setZoom(10);
-                        google.maps.event.removeListener(listener);
-                    });
-                });
-
-                function showInfoWindow(latLng, placeName) {
-                    infoWindow = infoWindow || new google.maps.InfoWindow();
-                    if (latLng) {
-                        var query = 'SELECT \'' + db.columnNames.name + '\' , \'' + db.columnNames.description + '\' FROM ' + db.tableId + ' WHERE ST_INTERSECTS(\'' + db.columnNames.geometry + '\' , CIRCLE(LATLNG(' + latLng.lat() + ', ' + latLng.lng() + '),1)) LIMIT 1';
-                        var gvizQuery = new google.visualization.Query('https://www.google.com/fusiontables/gvizdata?tq=' + encodeURIComponent(query));
-                        gvizQuery.send(function (response) {
-                            infoWindow.setMap(map);
-                            infoWindow.setPosition(latLng);
-                            infoWindow.setContent('<h1>' + escapeHtml(placeName) + '</h1>' + ((response.getDataTable().getNumberOfRows() == 1) ? response.getDataTable().getValue(0, 1).replace(/h1>/ig, 'p>') : ''));
-                            infoWindow.open(map);
-                        });
-                    } else {
-                        infoWindow.close();
-                    }
-                }
-
-                function togglePolygons(latLng) {
-                    ftLayer.setOptions({
-                        query: {
-                            select: db.columnNames.geometry,
-                            from: db.tableId,
-                            where: latLng ? 'ST_INTERSECTS(\'' + db.columnNames.geometry + '\', CIRCLE(LATLNG(' + latLng.lat() + ', ' + latLng.lng() + '),1))' : null
-                        }
-                    });
-                }
-
-                function escapeHtml(str) {
-                    var div = document.createElement('div');
-                    div.appendChild(document.createTextNode(str));
-                    return div.innerHTML;
-                };
-            }
-        });
-
         (function (i, s, o, g, r, a, m) {
             i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
                 (i[r].q = i[r].q || []).push(arguments)
